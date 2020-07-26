@@ -1,0 +1,44 @@
+[
+    {
+        "transactionName": "exportLicenseExists",
+        "transactionLabel": "A test exportLicenseExists transaction",
+        "arguments": [
+            "001"
+        ],
+        "transientData": {}
+    },
+    {
+        "transactionName": "createExportLicense",
+        "transactionLabel": "A test createExportLicense transaction",
+        "arguments": [
+            "001",
+            "some value"
+        ],
+        "transientData": {}
+    },
+    {
+        "transactionName": "readExportLicense",
+        "transactionLabel": "A test readExportLicense transaction",
+        "arguments": [
+            "001"
+        ],
+        "transientData": {}
+    },
+    {
+        "transactionName": "updateExportLicense",
+        "transactionLabel": "A test updateExportLicense transaction",
+        "arguments": [
+            "001",
+            "some other value"
+        ],
+        "transientData": {}
+    },
+    {
+        "transactionName": "deleteExportLicense",
+        "transactionLabel": "A test deleteExportLicense transaction",
+        "arguments": [
+            "001"
+        ],
+        "transientData": {}
+    }
+]

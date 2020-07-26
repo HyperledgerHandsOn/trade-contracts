@@ -1,0 +1,44 @@
+[
+    {
+        "transactionName": "letterOfCreditExists",
+        "transactionLabel": "A test letterOfCreditExists transaction",
+        "arguments": [
+            "001"
+        ],
+        "transientData": {}
+    },
+    {
+        "transactionName": "createLetterOfCredit",
+        "transactionLabel": "A test createLetterOfCredit transaction",
+        "arguments": [
+            "001",
+            "some value"
+        ],
+        "transientData": {}
+    },
+    {
+        "transactionName": "readLetterOfCredit",
+        "transactionLabel": "A test readLetterOfCredit transaction",
+        "arguments": [
+            "001"
+        ],
+        "transientData": {}
+    },
+    {
+        "transactionName": "updateLetterOfCredit",
+        "transactionLabel": "A test updateLetterOfCredit transaction",
+        "arguments": [
+            "001",
+            "some other value"
+        ],
+        "transientData": {}
+    },
+    {
+        "transactionName": "deleteLetterOfCredit",
+        "transactionLabel": "A test deleteLetterOfCredit transaction",
+        "arguments": [
+            "001"
+        ],
+        "transientData": {}
+    }
+]
