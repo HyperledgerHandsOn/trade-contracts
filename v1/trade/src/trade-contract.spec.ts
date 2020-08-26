@@ -5,6 +5,7 @@
 /* tslint:disable:max-classes-per-file */
 import { Context } from 'fabric-contract-api';
 import { ChaincodeStub, ClientIdentity, Iterators } from 'fabric-shim';
+import Long = require('long');
 import { TradeContract } from '.';
 
 import * as chai from 'chai';
@@ -227,6 +228,13 @@ describe('As an importer, I can enter in a trade agreement with an exporter to a
     });
 
     describe('ImporterOrg reviews his trade history', () => {
+        const date = new Date();
+        const dateTs = {
+            nanos: date.getUTCMilliseconds() * 100000,
+            seconds: Long.fromInt(Math.trunc(date.getTime() / 1000)),
+        };
+        const dateTsStr = (new Date(dateTs.seconds.toInt() * 1000 + Math.round(dateTs.nanos / 1000000))).toString();
+
         it('should retrieve history of a trade', async () => {
             const obj1 = { tradeID: '1000', exporterMSP: 'ExporterOrg', importerMSP: 'ImporterOrg', amount: 1000.0, descriptionOfGoods: 'Apples', status: 'REQUESTED' };
             const obj2 = { tradeID: '1000', exporterMSP: 'ExporterOrg', importerMSP: 'ImporterOrg', amount: 1000.0, descriptionOfGoods: 'Apples', status: 'ACCEPTED' };
@@ -237,8 +245,8 @@ describe('As an importer, I can enter in a trade agreement with an exporter to a
 
             importerObjList.forEach((importerObj) => {
                 const importerJsonStr: string = JSON.stringify(importerObj);
-                importerResultset = importerResultset.concat({ txId: 'someId', timestamp: 'someTs', isDelete: 'false', value: Buffer.from(importerJsonStr)});
-                importerInvocationResult.push({ timestamp: 'someTs', isDelete: 'false', tradeAgreement: importerObj, txId: 'someId'});
+                importerResultset = importerResultset.concat({ txId: 'someId', timestamp: dateTs, isDelete: 'false', value: Buffer.from(importerJsonStr)});
+                importerInvocationResult.push({ timestamp: dateTsStr, isDelete: 'false', tradeAgreement: importerObj, txId: 'someId'});
             });
 
             const importerIterator: Iterators.HistoryQueryIterator = new TestHistoryQueryIterator(importerResultset);

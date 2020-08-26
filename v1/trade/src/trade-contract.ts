@@ -4,6 +4,7 @@
 
 import { Context, Contract, Info, Returns, Transaction } from 'fabric-contract-api';
 import { Iterators } from 'fabric-shim-api';
+import Long = require('long');
 import { TradeAgreement } from './tradeagreement';
 import { TradeAgreementHistory } from './tradeagreementhistory';
 import { TradeAgreementStatus } from './tradeagreementstatus';
@@ -29,7 +30,8 @@ export class TradeContract extends Contract {
         this.aclRules[TradeContract.getAclSubject('ImporterOrgMSP', 'importer')] = [ 'requestTrade', 'exists', 'getTrade', 'getTradeStatus', 'listTrade' ];
         this.aclRules[TradeContract.getAclSubject('ExporterOrgMSP', 'exporter_banker')] = [ 'exists', 'getTrade', 'getTradeStatus', 'listTrade' ];
         this.aclRules[TradeContract.getAclSubject('ImporterOrgMSP', 'importer_banker')] = [ 'exists', 'getTrade', 'getTradeStatus', 'listTrade' ];
-        this.aclRules[TradeContract.getAclSubject('RegulatorOrgMSP', 'regulator')] = [ 'exists', 'getTrade', 'getTradeStatus', 'listTrade' ];
+        this.aclRules[TradeContract.getAclSubject('RegulatorOrgMSP', 'regulator')] = [ 'exists', 'getTrade', 'getTradeStatus', 'listTrade',
+                                                                                        'getTradesByRange', 'getTradeHistory' ];
     }
 
     public async beforeTransaction(ctx: Context) {
@@ -120,6 +122,18 @@ export class TradeContract extends Contract {
     @Transaction(false)
     @Returns('TradeAgreement[]')
     public async listTrade(ctx: Context): Promise<TradeAgreement[]> {
+        const mspid = ctx.clientIdentity.getMSPID();
+        if (mspid === 'RegulatorOrgMSP') {
+            const queryRegulator = {
+                selector: {
+                    tradeID: { $regex: '.+' },
+                },
+                use_index: ['_design/regulatorIndexDoc', 'regulatorIndex'],
+            };
+
+            const resultsetRegulator = await ctx.stub.getQueryResult(JSON.stringify(queryRegulator));
+            return await this.processResultset(resultsetRegulator);
+        }
         const queryExporter = {
             selector: {
                 exporterMSP: ctx.clientIdentity.getMSPID(),
@@ -161,7 +175,11 @@ export class TradeContract extends Contract {
                 if (obj.value) {
                     const tradeHistory = new TradeAgreementHistory();
                     tradeHistory.txId = obj.value.txId;
-                    tradeHistory.timestamp = Buffer.from(obj.value.timestamp).toString('utf8');
+                    if (Long.isLong(obj.value.timestamp.seconds)) {
+                        tradeHistory.timestamp = (new Date(obj.value.timestamp.seconds.toInt() * 1000 + Math.round(obj.value.timestamp.nanos / 1000000))).toString();
+                    } else {
+                        tradeHistory.timestamp = (new Date(obj.value.timestamp.seconds * 1000 + Math.round(obj.value.timestamp.nanos / 1000000))).toString();
+                    }
                     tradeHistory.isDelete = obj.value.isDelete.toString();
                     const resultStr = Buffer.from(obj.value.value).toString('utf8');
                     const tradeJSON = await JSON.parse(resultStr) as TradeAgreement;
