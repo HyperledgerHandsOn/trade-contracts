@@ -74,6 +74,14 @@ describe('ShipmentContract', () => {
             await contract.beforeTransaction(ctx).should.throw;
         });
 
+        it('should not be allowed to proceed due to role not having access to transaction.', async () => {
+            ctx.clientIdentity.getMSPID.returns('ImporterOrgMSP');
+            ctx.clientIdentity.getAttributeValue.withArgs('BUSINESS_ROLE').returns('importer');
+            ctx.stub.getFunctionAndParameters.returns(JSON.parse('{"params":[], "fcn":"getShipmentLocation"}'));
+
+            await contract.beforeTransaction(ctx).should.throw;
+        });
+
         it('should be allowed to proceed and not throw any exceptions.', async () => {
             ctx.clientIdentity.getMSPID.returns('ExporterOrgMSP');
             ctx.clientIdentity.getAttributeValue.withArgs('BUSINESS_ROLE').returns('exporter');
