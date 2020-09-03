@@ -5,6 +5,7 @@
 /* tslint:disable:max-classes-per-file */
 import { Context } from 'fabric-contract-api';
 import { ChaincodeStub, ClientIdentity, Iterators } from 'fabric-shim';
+import Long = require('long');
 import { TradeContract } from '.';
 
 import * as chai from 'chai';
@@ -38,6 +39,13 @@ const importerQuery = {
         importerMSP: 'ImporterOrg',
     },
     use_index: ['_design/importerIndexDoc', 'importerIndex'],
+};
+
+const regulatorQuery = {
+    selector: {
+        tradeID: { $regex: '.+' },
+    },
+    use_index: ['_design/regulatorIndexDoc', 'regulatorIndex'],
 };
 
 class TestStateQueryIterator implements Iterators.StateQueryIterator {
@@ -98,7 +106,7 @@ describe('As an importer, I can enter in a trade agreement with an exporter to a
     let contract: TradeContract;
     let ctx: TestContext;
 
-    async function beforeTestList(exporterObjList: any, importerObjList: any, clientMSP: string) {
+    async function beforeTestList(exporterObjList: any, importerObjList: any, regulatorObjList: any, clientMSP: string) {
         let exporterResultset = [];
         if (exporterObjList !== null) {
             exporterObjList.forEach((exporterObj) => {
@@ -115,14 +123,24 @@ describe('As an importer, I can enter in a trade agreement with an exporter to a
             });
         }
 
+        let regulatorResultset = [];
+        if (regulatorObjList !== null) {
+            regulatorObjList.forEach((regulatorObj) => {
+                const regulatorJsonStr: string = JSON.stringify(regulatorObj);
+                regulatorResultset = regulatorResultset.concat({ namespace: 'somenamespace', key: 'somekey', value: Buffer.from(regulatorJsonStr)});
+            });
+        }
+
         const exporterIterator: Iterators.StateQueryIterator = new TestStateQueryIterator(exporterResultset);
         const importerIterator: Iterators.StateQueryIterator = new TestStateQueryIterator(importerResultset);
+        const regulatorIterator: Iterators.StateQueryIterator = new TestStateQueryIterator(regulatorResultset);
 
         exporterQuery.selector.exporterMSP = clientMSP;
         importerQuery.selector.importerMSP = clientMSP;
         ctx.clientIdentity.getMSPID.returns(clientMSP);
         ctx.stub.getQueryResult.withArgs(JSON.stringify(exporterQuery)).resolves(exporterIterator);
         ctx.stub.getQueryResult.withArgs(JSON.stringify(importerQuery)).resolves(importerIterator);
+        ctx.stub.getQueryResult.withArgs(JSON.stringify(regulatorQuery)).resolves(regulatorIterator);
     }
 
     beforeEach(() => {
@@ -149,12 +167,25 @@ describe('As an importer, I can enter in a trade agreement with an exporter to a
     describe('ImporterOrg reviews his trade requests', () => {
         it('should retrieve their existing trade requests', async () => {
             const obj = { tradeID: '1001', exporterMSP: 'ExporterOrg', importerMSP: 'ImporterOrg', amount: 1000.0, descriptionOfGoods: 'Apples', status: 'REQUESTED' };
-            beforeTestList(null, [obj], 'ImporterOrg');
+            beforeTestList(null, [obj], [obj], 'ImporterOrg');
             await contract.listTrade(ctx).should.eventually.deep.equal([obj]);
         });
 
         it('should return an empty list if they have no trade requests.', async () => {
-            beforeTestList(null, null, 'ImporterOrg');
+            beforeTestList(null, null, null, 'ImporterOrg');
+            await contract.listTrade(ctx).should.eventually.deep.equal([]);
+        });
+    });
+
+    describe('RegulatorOrg reviews recorded trades', () => {
+        it('should retrieve existing trades', async () => {
+            const obj = { tradeID: '1001', exporterMSP: 'ExporterOrg', importerMSP: 'ImporterOrg', amount: 1000.0, descriptionOfGoods: 'Apples', status: 'REQUESTED' };
+            beforeTestList(null, [obj], [obj], 'RegulatorOrgMSP');
+            await contract.listTrade(ctx).should.eventually.deep.equal([obj]);
+        });
+
+        it('should return an empty list if there are no recorded trades.', async () => {
+            beforeTestList(null, null, null, 'RegulatorOrgMSP');
             await contract.listTrade(ctx).should.eventually.deep.equal([]);
         });
     });
@@ -163,18 +194,18 @@ describe('As an importer, I can enter in a trade agreement with an exporter to a
         it('should retrieve more than one trade requests where they are the exporter', async () => {
             const obj1 = {tradeID: '1001', exporterMSP: 'ExporterOrg', importerMSP: 'ImporterOrg', amount: 1000.0, descriptionOfGoods: 'Apples', status: 'REQUESTED'};
             const obj2 = {tradeID: '1002', exporterMSP: 'ExporterOrg', importerMSP: 'ImporterOrg', amount: 1000.0, descriptionOfGoods: 'Oranges', status: 'REQUESTED'};
-            beforeTestList([obj1, obj2], null, 'ExporterOrg');
+            beforeTestList([obj1, obj2], null, [obj1, obj2], 'ExporterOrg');
             await contract.listTrade(ctx).should.eventually.deep.equal([obj1, obj2]);
         });
 
         it('should retrieve existing trade requests where they are the exporter', async () => {
             const obj = { tradeID: '1001', exporterMSP: 'ExporterOrg', importerMSP: 'ImporterOrg', amount: 1000.0, descriptionOfGoods: 'Apples', status: 'REQUESTED' };
-            beforeTestList([obj], null, 'ExporterOrg');
+            beforeTestList([obj], null, [obj], 'ExporterOrg');
             await contract.listTrade(ctx).should.eventually.deep.equal([obj]);
         });
 
         it('should return an empty list if they have no requests.', async () => {
-            beforeTestList(null, null, 'ExporterOrg');
+            beforeTestList(null, null, null, 'ExporterOrg');
             await contract.listTrade(ctx).should.eventually.deep.equal([]);
         });
 
@@ -227,6 +258,18 @@ describe('As an importer, I can enter in a trade agreement with an exporter to a
     });
 
     describe('ImporterOrg reviews his trade history', () => {
+        const date = new Date();
+        const dateTs = {
+            nanos: date.getUTCMilliseconds() * 100000,
+            seconds: Long.fromInt(Math.trunc(date.getTime() / 1000)),
+        };
+        const dateTsStr = (new Date(dateTs.seconds.toInt() * 1000 + Math.round(dateTs.nanos / 1000000))).toString();
+        const dateTs1 = {
+            nanos: date.getUTCMilliseconds() * 100000,
+            seconds: Math.trunc(date.getTime() / 1000),
+        };
+        const dateTsStr1 = (new Date(dateTs1.seconds * 1000 + Math.round(dateTs1.nanos / 1000000))).toString();
+
         it('should retrieve history of a trade', async () => {
             const obj1 = { tradeID: '1000', exporterMSP: 'ExporterOrg', importerMSP: 'ImporterOrg', amount: 1000.0, descriptionOfGoods: 'Apples', status: 'REQUESTED' };
             const obj2 = { tradeID: '1000', exporterMSP: 'ExporterOrg', importerMSP: 'ImporterOrg', amount: 1000.0, descriptionOfGoods: 'Apples', status: 'ACCEPTED' };
@@ -237,8 +280,8 @@ describe('As an importer, I can enter in a trade agreement with an exporter to a
 
             importerObjList.forEach((importerObj) => {
                 const importerJsonStr: string = JSON.stringify(importerObj);
-                importerResultset = importerResultset.concat({ txId: 'someId', timestamp: 'someTs', isDelete: 'false', value: Buffer.from(importerJsonStr)});
-                importerInvocationResult.push({ timestamp: 'someTs', isDelete: 'false', tradeAgreement: importerObj, txId: 'someId'});
+                importerResultset = importerResultset.concat({ txId: 'someId', timestamp: dateTs, isDelete: 'false', value: Buffer.from(importerJsonStr)});
+                importerInvocationResult.push({ timestamp: dateTsStr, isDelete: 'false', tradeAgreement: importerObj, txId: 'someId'});
             });
 
             const importerIterator: Iterators.HistoryQueryIterator = new TestHistoryQueryIterator(importerResultset);
@@ -246,6 +289,23 @@ describe('As an importer, I can enter in a trade agreement with an exporter to a
             ctx.stub.getHistoryForKey.withArgs('1000').resolves(importerIterator);
 
             await contract.getTradeHistory(ctx, '1000').should.eventually.deep.equal(importerInvocationResult);
+
+            const exporterObjList = [obj1, obj2];
+
+            let exporterResultset = [];
+            const exporterInvocationResult = [];
+
+            exporterObjList.forEach((exporterObj) => {
+                const exporterJsonStr: string = JSON.stringify(exporterObj);
+                exporterResultset = exporterResultset.concat({ txId: 'someId', timestamp: dateTs1, isDelete: 'false', value: Buffer.from(exporterJsonStr)});
+                exporterInvocationResult.push({ timestamp: dateTsStr1, isDelete: 'false', tradeAgreement: exporterObj, txId: 'someId'});
+            });
+
+            const exporterIterator: Iterators.HistoryQueryIterator = new TestHistoryQueryIterator(exporterResultset);
+
+            ctx.stub.getHistoryForKey.withArgs('1000').resolves(exporterIterator);
+
+            await contract.getTradeHistory(ctx, '1000').should.eventually.deep.equal(exporterInvocationResult);
         });
 
         it('should return an empty list.', async () => {
