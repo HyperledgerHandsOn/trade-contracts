@@ -20,8 +20,8 @@
     "author": "Luc Desrosiers",
     "license": "Apache-2.0",
     "dependencies": {
-        "fabric-contract-api": "^2.1.4",
-        "fabric-shim": "^2.1.4"
+        "fabric-contract-api": "^2.2.0",
+        "fabric-shim": "^2.2.0"
     },
     "devDependencies": {
         "@types/chai": "^4.2.0",
