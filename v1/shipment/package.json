@@ -24,6 +24,7 @@
         "fabric-shim": "^2.2.0"
     },
     "devDependencies": {
+        "@grpc/grpc-js": ">=1.1.8",
         "@types/chai": "^4.2.0",
         "@types/chai-as-promised": "^7.1.2",
         "@types/mocha": "^5.2.7",
@@ -32,6 +33,9 @@
         "@types/sinon-chai": "^3.2.3",
         "chai": "^4.2.0",
         "chai-as-promised": "^7.1.1",
+        "class-transformer": ">=0.3.1",
+        "hosted-git-info": ">=2.8.9",
+        "lodash": ">=4.17.21",
         "mocha": "^6.2.0",
         "nyc": "^14.1.1",
         "sinon": "^7.4.1",
@@ -39,7 +43,8 @@
         "ts-node": "^8.3.0",
         "tslint": "^5.19.0",
         "typescript": "^3.6.2",
-        "winston": "^3.2.1"
+        "winston": "^3.2.1",
+        "y18n": ">=4.0.1"
     },
     "nyc": {
         "extension": [
