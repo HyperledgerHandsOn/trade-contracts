@@ -7,6 +7,7 @@ cache:
   directories:
   - v1/trade/node_modules
 script:
+- echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USER" --password-stdin
 - cd v1/trade && make build
 - make test
 - cd ../exportLicense && make build
@@ -14,12 +15,13 @@ script:
 - cd ../letterOfCredit && make build
 - make test
 before_deploy:
+- echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USER" --password-stdin
 - cd v1/trade && make package
 - cd ../exportLicense && make package
 - cd ../letterOfCredit && make package
 deploy:
   provider: releases
-  api_key: ${OAUTH_TOKEN}
+  api_key: ${GITHUB_TOKEN}
   file_glob: true
   file: ./**/dist/*.tgz
   skip_cleanup: true
