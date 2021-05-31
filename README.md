@@ -1,4 +1,4 @@
-[![Build Status](https://travis.ibm.com/Hyperledger-Book-2nd-Edition/trade-contracts.svg?token=sQbGqm1RNTX4ZceCsxf9&branch=master)](https://travis.ibm.com/Hyperledger-Book-2nd-Edition/trade-contracts)  
+[![Build Status](https://travis-ci.com/HyperledgerHandsOn/trade-contracts.svg?branch=master)](https://travis-ci.com/HyperledgerHandsOn/trade-contracts)  
 # Trade-contracts
 
 This repository contains the various smart contracts of the Trade Network.
